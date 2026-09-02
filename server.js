@@ -1,46 +1,67 @@
 import { WebSocketServer } from 'ws';
-import { randomUUID } from 'crypto';
 
 
 const wss = new WebSocketServer({ port: 3006 });
 
 console.log('WebSocket server listening on ws://localhost:3006');
 
-const clients = new Set();
+const clients = new Map();
+
+function handleJoin(ws, payload) {
+  const { username } = payload;
+
+  if (clients.has(username)) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: `Username "${username}" is already taken` }
+    }));
+    return;
+  }
+
+  ws.username = username;
+  clients.set(username, ws);
+
+  console.log(`${username} joined`);
+}
+
+function handleMessage(ws, payload) {
+  const outgoing = JSON.stringify({
+    type: 'message',
+    payload: { username: ws.username, text: payload.text }
+  });
+
+  for (const [username, client] of clients) {
+    if (client !== ws && client.readyState === client.OPEN) {
+      client.send(outgoing);
+    }
+  }
+}
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
-  ws.id = randomUUID();
-  
-  clients.add(ws);
 
-  ws.on('message', (data) => {
-  if(data.toString().trim() === '')
-  {
+ ws.on('message', (data) => {
+  let parsed;
+  try {
+    parsed = JSON.parse(data.toString());
+  } catch (err) {
+    ws.send(JSON.stringify({ type: 'error', payload: { message: 'Invalid JSON' } }));
     return;
   }
-  const message = data.toString();
-  console.log('Received:', message);
 
-  for (const client of clients) 
-  {
-    if(client !== ws && client.readyState === client.OPEN) 
-    {
-    client.send(message);
-    }
-  }
-  });
+  const { type, payload } = parsed;
 
-  ws.on('close', () => {
-    console.log('Client disconnected');
-    const disconnectMessage = `A client has disconnected.${ws.id ? ` (Client ID: ${ws.id})` : ''}`;
-     for (const client of clients) 
-  {
-    if(client !== ws && client.readyState === client.OPEN) 
-    {
-    client.send(disconnectMessage);
-    }
+  if (type === 'join') {
+    handleJoin(ws, payload);
+  } else if (type === 'message') {
+    handleMessage(ws, payload);
   }
-    clients.delete(ws);
-  });
+});
+
+ ws.on('close', () => {
+  console.log(`${ws.username || 'A client'} disconnected`);
+  if (ws.username) {
+    clients.delete(ws.username);
+  }
+});
 });
