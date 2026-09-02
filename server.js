@@ -7,6 +7,19 @@ console.log('WebSocket server listening on ws://localhost:3006');
 
 const clients = new Map();
 
+function getOnlineUsers() {
+  return Array.from(clients.keys());
+}
+
+function broadcast(messageObj, exclude = null) {
+  const data = JSON.stringify(messageObj);
+  for (const [username, client] of clients) {
+    if (client !== exclude && client.readyState === client.OPEN) {
+      client.send(data);
+    }
+  }
+}
+
 function handleJoin(ws, payload) {
   const { username } = payload;
 
@@ -22,19 +35,16 @@ function handleJoin(ws, payload) {
   clients.set(username, ws);
 
   console.log(`${username} joined`);
+
+  broadcast({ type: 'system', payload: { text: `${username} joined the chat` } });
+  broadcast({ type: 'users', payload: { users: getOnlineUsers() } });
 }
 
 function handleMessage(ws, payload) {
-  const outgoing = JSON.stringify({
+  broadcast({
     type: 'message',
     payload: { username: ws.username, text: payload.text }
-  });
-
-  for (const [username, client] of clients) {
-    if (client !== ws && client.readyState === client.OPEN) {
-      client.send(outgoing);
-    }
-  }
+  }, ws);
 }
 
 wss.on('connection', (ws) => {
@@ -58,10 +68,13 @@ wss.on('connection', (ws) => {
   }
 });
 
- ws.on('close', () => {
-  console.log(`${ws.username || 'A client'} disconnected`);
+ws.on('close', () => {
   if (ws.username) {
+    console.log(`${ws.username} disconnected`);
     clients.delete(ws.username);
+
+    broadcast({ type: 'system', payload: { text: `${ws.username} left the chat` } });
+    broadcast({ type: 'users', payload: { users: getOnlineUsers() } });
   }
 });
 });
