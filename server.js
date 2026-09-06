@@ -7,6 +7,11 @@ console.log('WebSocket server listening on ws://localhost:3006');
 
 const clients = new Map();
 
+
+const HEARTBEAT_INTERVAL = 30000; 
+
+
+
 function getOnlineUsers() {
   return Array.from(clients.keys());
 }
@@ -49,6 +54,24 @@ function handleMessage(ws, payload) {
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
+  setInterval(() => {
+  for (const [username, client] of clients) {
+    if (client.isAlive === false) {
+      console.log(`${username} failed to respond to ping — terminating`);
+      client.terminate();
+      continue;
+    }
+
+    client.isAlive = false;
+    client.ping();
+  }
+}, HEARTBEAT_INTERVAL);
+
+  ws.isAlive = true;
+
+ws.on('pong', () => {
+  ws.isAlive = true;
+});
 
  ws.on('message', (data) => {
   let parsed;
