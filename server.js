@@ -10,6 +10,23 @@ const clients = new Map();
 
 const HEARTBEAT_INTERVAL = 30000; 
 
+  setInterval(() => {
+  for (const [username, client] of clients) {
+    if (client.isAlive === false) {
+      console.log(`${username} failed to respond to ping — terminating`);
+      client.terminate();
+      continue;
+    }
+
+    client.isAlive = false;
+    client.ping();
+  }
+}, HEARTBEAT_INTERVAL);
+
+function handleTyping(ws, payload) {
+  broadcast({ type: 'typing', payload: { username: ws.username } }, ws);
+}
+
 
 
 function getOnlineUsers() {
@@ -49,24 +66,11 @@ function handleMessage(ws, payload) {
   broadcast({
     type: 'message',
     payload: { username: ws.username, text: payload.text }
-  }, ws);
+  });
 }
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
-  setInterval(() => {
-  for (const [username, client] of clients) {
-    if (client.isAlive === false) {
-      console.log(`${username} failed to respond to ping — terminating`);
-      client.terminate();
-      continue;
-    }
-
-    client.isAlive = false;
-    client.ping();
-  }
-}, HEARTBEAT_INTERVAL);
-
   ws.isAlive = true;
 
 ws.on('pong', () => {
@@ -88,6 +92,8 @@ ws.on('pong', () => {
     handleJoin(ws, payload);
   } else if (type === 'message') {
     handleMessage(ws, payload);
+  } else if (type === 'typing') {
+  handleTyping(ws, payload);
   }
 });
 
