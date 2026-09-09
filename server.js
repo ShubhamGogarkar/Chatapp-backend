@@ -6,6 +6,8 @@ const wss = new WebSocketServer({ port: 3006 });
 console.log('WebSocket server listening on ws://localhost:3006');
 
 const clients = new Map();
+const MAX_USERNAME_LENGTH = 20;
+const MAX_MESSAGE_LENGTH = 500;
 
 
 const HEARTBEAT_INTERVAL = 30000; 
@@ -45,6 +47,19 @@ function broadcast(messageObj, exclude = null) {
 function handleJoin(ws, payload) {
   const { username } = payload;
 
+  if (!username || typeof username !== 'string' || username.trim().length === 0) {
+    ws.send(JSON.stringify({ type: 'error', payload: { message: 'Username is required' } }));
+    return;
+  }
+
+  if (username.length > MAX_USERNAME_LENGTH) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: `Username must be ${MAX_USERNAME_LENGTH} characters or fewer` }
+    }));
+    return;
+  }
+
   if (clients.has(username)) {
     ws.send(JSON.stringify({
       type: 'error',
@@ -63,6 +78,19 @@ function handleJoin(ws, payload) {
 }
 
 function handleMessage(ws, payload) {
+
+  if (!payload.text || typeof payload.text !== 'string' || payload.text.trim().length === 0) {
+    return;
+  }
+
+  if (payload.text.length > MAX_MESSAGE_LENGTH) {
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer` }
+    }));
+    return;
+  }
+
   broadcast({
     type: 'message',
     payload: { username: ws.username, text: payload.text }
@@ -86,6 +114,8 @@ ws.on('pong', () => {
     return;
   }
 
+  try{
+
   const { type, payload } = parsed;
 
   if (type === 'join') {
@@ -94,6 +124,10 @@ ws.on('pong', () => {
     handleMessage(ws, payload);
   } else if (type === 'typing') {
   handleTyping(ws, payload);
+  }
+}catch  (err) {
+    console.error('Error handling message:', err);
+    ws.send(JSON.stringify({ type: 'error', payload: { message: 'Something went wrong' } }));
   }
 });
 
