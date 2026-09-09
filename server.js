@@ -26,6 +26,12 @@ const HEARTBEAT_INTERVAL = 30000;
 }, HEARTBEAT_INTERVAL);
 
 function handleTyping(ws, payload) {
+  
+  if (!ws.username) {
+    ws.send(JSON.stringify({ type: 'error', payload: { message: 'You must join before typing' } }));
+    return;
+  }
+
   broadcast({ type: 'typing', payload: { username: ws.username } }, ws);
 }
 
@@ -79,7 +85,7 @@ function handleJoin(ws, payload) {
 
 function handleMessage(ws, payload) {
 
-  if (!payload.text || typeof payload.text !== 'string' || payload.text.trim().length === 0) {
+  if (!payload.text || typeof payload.text !== 'string' || payload.text.trim().length === 0 || !ws.username) {
     return;
   }
 
