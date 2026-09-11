@@ -1,9 +1,9 @@
 # WebSocket Chat — Backend
 
-The WebSocket server for a real-time chat app. Deployed separately from [the frontend](link-to-frontend-repo) — see that repo for the React client.
+The WebSocket server for a real-time chat app. Deployed separately from [the frontend](https://github.com/ShubhamGogarkar/Chatapp-frontend) — see that repo for the React client.
 
-**Live backend:** ``
-**Live app:**  ← this is the one to actually try
+**Live backend:** `https://chatapp-backend-nn1x.onrender.com`
+**Live app:*https://chatapp-frontend-9heg.onrender.com*  ← this is the one to actually try
 
 ## How it works
 
