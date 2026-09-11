@@ -1,9 +1,10 @@
 import { WebSocketServer } from 'ws';
 
+const PORT = process.env.PORT || 3006;
 
-const wss = new WebSocketServer({ port: 3006 });
+const wss = new WebSocketServer({ port: PORT });
 
-console.log('WebSocket server listening on ws://localhost:3006');
+console.log(`WebSocket server listening on ws://localhost:${PORT}`);
 
 const clients = new Map();
 const MAX_USERNAME_LENGTH = 20;
@@ -87,6 +88,10 @@ function handleJoin(ws, payload) {
 
 function handleMessage(ws, payload) {
 
+  if (!payload.text || typeof payload.text !== 'string' || payload.text.trim().length === 0 || !ws.username) {
+    return;
+  }
+
   const now = Date.now();
   ws.messageTimestamps = ws.messageTimestamps.filter((t) => now - t < RATE_LIMIT_WINDOW);
 
@@ -97,9 +102,6 @@ function handleMessage(ws, payload) {
 
   ws.messageTimestamps.push(now);
 
-  if (!payload.text || typeof payload.text !== 'string' || payload.text.trim().length === 0 || !ws.username) {
-    return;
-  }
 
   if (payload.text.length > MAX_MESSAGE_LENGTH) {
     ws.send(JSON.stringify({
