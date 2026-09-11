@@ -8,6 +8,8 @@ console.log('WebSocket server listening on ws://localhost:3006');
 const clients = new Map();
 const MAX_USERNAME_LENGTH = 20;
 const MAX_MESSAGE_LENGTH = 500;
+const RATE_LIMIT_WINDOW = 1000;
+const RATE_LIMIT_MAX = 5;
 
 
 const HEARTBEAT_INTERVAL = 30000; 
@@ -85,6 +87,16 @@ function handleJoin(ws, payload) {
 
 function handleMessage(ws, payload) {
 
+  const now = Date.now();
+  ws.messageTimestamps = ws.messageTimestamps.filter((t) => now - t < RATE_LIMIT_WINDOW);
+
+  if (ws.messageTimestamps.length >= RATE_LIMIT_MAX) {
+    ws.send(JSON.stringify({ type: 'error', payload: { message: 'Sending too fast — slow down' } }));
+    return;
+  }
+
+  ws.messageTimestamps.push(now);
+
   if (!payload.text || typeof payload.text !== 'string' || payload.text.trim().length === 0 || !ws.username) {
     return;
   }
@@ -106,6 +118,7 @@ function handleMessage(ws, payload) {
 wss.on('connection', (ws) => {
   console.log('Client connected');
   ws.isAlive = true;
+  ws.messageTimestamps = [];
 
 ws.on('pong', () => {
   ws.isAlive = true;
