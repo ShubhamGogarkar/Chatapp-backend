@@ -4,7 +4,7 @@ import express from 'express';
 const app = express();
 const PORT = process.env.PORT || 3006;
 
-app.get('/', (req, res) => {
+app.get('/healthcheck', (req, res) => {
   res.send('WebSocket server is running');
 });
 const server = app.listen(PORT, () => {
