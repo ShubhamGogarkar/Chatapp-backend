@@ -1,8 +1,17 @@
 import { WebSocketServer } from 'ws';
+import express from 'express';
 
+const app = express();
 const PORT = process.env.PORT || 3006;
 
-const wss = new WebSocketServer({ port: PORT });
+app.get('/', (req, res) => {
+  res.send('WebSocket server is running');
+});
+const server = app.listen(PORT, () => {
+  console.log(`HTTP server listening on http://localhost:${PORT}`);
+});
+
+const wss = new WebSocketServer({ server });
 
 console.log(`WebSocket server listening on ws://localhost:${PORT}`);
 
